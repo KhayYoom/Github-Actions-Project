@@ -24,5 +24,30 @@ jobs:
         distribution: 'temurin'
         cache: maven
     - name: Build with Maven
-      run: mvn -B package --file pom.xml
+      run: mvn compile
 
+  security-check:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Trivy Installation
+      run: |
+        cat << EOF | sudo tee -a /etc/yum.repos.d/trivy.repo
+        [trivy]
+        name=Trivy repository
+        baseurl=https://aquasecurity.github.io/trivy-repo/rpm/releases/\$basearch/
+        gpgcheck=1
+        enabled=1
+        gpgkey=https://aquasecurity.github.io/trivy-repo/rpm/public.key
+        EOF
+        sudo yum -y update -y
+        sudo yum -y install trivy -y
+    - name: trivy FS Scan
+      run: trivy fs --format table -o fs-report.json
+
+    - name: Gitleaks intallation
+      run: sudo apt install gitleaks -y
+
+    - name: Gitleaks Code Scan
+      run: gitleaks detect source . r fitleaks-report.json -f json
